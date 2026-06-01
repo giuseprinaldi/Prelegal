@@ -384,7 +384,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "var(--bg-app)" }}>
       {/* Top Navigation / Header */}
-      <header style={{
+      <header className="no-print" style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -517,7 +517,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         
         {/* Left Column: Form Settings (Scrollable) */}
-        <aside style={{
+        <aside className="no-print" style={{
           width: "480px",
           borderRight: "1px solid var(--border-color)",
           background: "rgba(10, 15, 30, 0.5)",
@@ -874,7 +874,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
           position: "relative"
         }}>
           {/* Tab Selector */}
-          <div style={{
+          <div className="no-print" style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -940,17 +940,26 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
 
           {/* Paper View Container */}
           <div className="paper-container">
-            <div className="paper-page" id="printable-area">
-              {activeTab === "full" && (
-                <>
+            {activeTab === "full" && (
+              <>
+                <div className="paper-page">
                   {renderCoverPage()}
-                  <div style={{ pageBreakBefore: "always", margin: "4rem 0", borderTop: "2px dashed #cbd5e1", paddingTop: "4rem" }}></div>
+                </div>
+                <div className="paper-page">
                   {renderStandardTerms()}
-                </>
-              )}
-              {activeTab === "cover" && renderCoverPage()}
-              {activeTab === "terms" && renderStandardTerms()}
-            </div>
+                </div>
+              </>
+            )}
+            {activeTab === "cover" && (
+              <div className="paper-page">
+                {renderCoverPage()}
+              </div>
+            )}
+            {activeTab === "terms" && (
+              <div className="paper-page">
+                {renderStandardTerms()}
+              </div>
+            )}
           </div>
         </main>
 

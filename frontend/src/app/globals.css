@@ -149,10 +149,12 @@ label {
 /* Preview Paper Styles */
 .paper-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   padding: 2rem;
   overflow-y: auto;
   height: 100%;
+  gap: 2rem;
 }
 
 .paper-page {
@@ -161,7 +163,7 @@ label {
   width: 100%;
   max-width: 800px;
   min-height: 1030px;
-  padding: 3rem 4rem;
+  padding: 3.5rem 4.5rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   border-radius: 4px;
   position: relative;
@@ -205,12 +207,12 @@ label {
 }
 
 .paper-page p {
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
   text-align: justify;
 }
 
 .paper-page ul, .paper-page ol {
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
   padding-left: 1.5rem;
 }
 
@@ -252,19 +254,56 @@ label {
 
 /* Printing styles */
 @media print {
-  body * {
-    visibility: hidden;
+  /* Hide all UI elements */
+  header,
+  aside,
+  .no-print {
+    display: none !important;
   }
-  .paper-page, .paper-page * {
-    visibility: visible;
+  
+  /* Reset document flow for print */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    height: auto !important;
+    font-size: 12pt !important;
   }
-  .paper-page {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none !important;
+  
+  .paper-container {
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+  
+  .paper-page {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 0 30mm 0 !important; /* Space between pages during print */
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    min-height: 0 !important;
+  }
+  
+  .paper-page:last-child {
+    margin-bottom: 0 !important;
+    page-break-after: avoid;
+  }
+  
+  /* Make text look clean on paper */
+  p, li, td {
+    color: #000000 !important;
+  }
+  
+  th {
+    background-color: #f1f5f9 !important;
   }
 }
