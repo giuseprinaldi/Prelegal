@@ -163,6 +163,8 @@ label {
   width: 100%;
   max-width: 800px;
   min-height: 1030px;
+  height: auto;
+  flex-shrink: 0;
   padding: 3.5rem 4.5rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   border-radius: 4px;
@@ -261,22 +263,24 @@ label {
     display: none !important;
   }
   
-  /* Reset document flow for print */
-  html, body {
+  /* Reset document flow and disable layout height limits for print */
+  html, body,
+  .app-container,
+  .split-pane,
+  .preview-panel,
+  .paper-container {
     background: #ffffff !important;
     color: #000000 !important;
     overflow: visible !important;
     height: auto !important;
-    font-size: 12pt !important;
-  }
-  
-  .paper-container {
+    min-height: 0 !important;
     display: block !important;
+    position: static !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
-    height: auto !important;
-    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 12pt !important;
   }
   
   .paper-page {

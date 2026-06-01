@@ -382,7 +382,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "var(--bg-app)" }}>
+    <div className="app-container" style={{ display: "flex", flexDirection: "column", height: "100vh", backgroundColor: "var(--bg-app)" }}>
       {/* Top Navigation / Header */}
       <header className="no-print" style={{
         display: "flex",
@@ -514,7 +514,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
       </header>
 
       {/* Main Workspace Area (2 columns: Inputs & Live Preview) */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="split-pane" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         
         {/* Left Column: Form Settings (Scrollable) */}
         <aside className="no-print" style={{
@@ -865,7 +865,7 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
         </aside>
 
         {/* Right Column: Live Document Preview */}
-        <main style={{
+        <main className="preview-panel" style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
