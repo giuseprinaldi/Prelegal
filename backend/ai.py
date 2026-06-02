@@ -133,6 +133,7 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
             api_key=os.environ.get("OPENROUTER_API_KEY"),
             api_base="https://openrouter.ai/api/v1",
             extra_body=EXTRA_BODY,
+            num_retries=3,
             timeout=30.0
         )
         result = response.choices[0].message.content
