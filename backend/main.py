@@ -9,9 +9,14 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 import json
 import datetime
+from dotenv import load_dotenv
+
+# Load env variables
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from database import create_db_and_tables, get_db, User, Document
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
+from ai import ChatRequest, run_ai_chat
 
 # Pydantic schemas for request/response bodies
 class UserCreate(BaseModel):
@@ -222,6 +227,16 @@ def delete_document(doc_id: int, current_user: User = Depends(get_current_user),
     db.delete(doc)
     db.commit()
     return {"message": "Document deleted successfully"}
+
+# AI Chat Endpoint
+@app.post("/api/chat")
+def chat_with_ai(chat_req: ChatRequest):
+    response = run_ai_chat(
+        message=chat_req.message,
+        chat_history=chat_req.chat_history,
+        current_variables=chat_req.current_variables
+    )
+    return response
 
 # Frontend static serving and client routing fallback
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "out"))
