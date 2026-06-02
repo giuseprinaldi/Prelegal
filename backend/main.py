@@ -5,7 +5,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Session, select
 import json
 import datetime
@@ -28,8 +28,7 @@ class UserResponse(BaseModel):
     username: str
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -57,8 +56,7 @@ class DocumentResponse(BaseModel):
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -200,7 +198,7 @@ def update_document(doc_id: int, doc_data: DocumentUpdate, current_user: User = 
     if doc_data.content is not None:
         doc.content = doc_data.content
         
-    doc.updated_at = datetime.datetime.utcnow()
+    doc.updated_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     db.add(doc)
     db.commit()
     db.refresh(doc)
