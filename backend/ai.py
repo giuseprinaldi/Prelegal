@@ -173,12 +173,91 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
             return chat_response
         except Exception as json_err:
             print(f"Failed to parse LLM response as LLMChatResponse JSON: {json_err}. Raw response: {result}")
-            # Fallback: treat raw response as the assistant's message, keeping variables and document selection unchanged
-            return LLMChatResponse(
-                assistant_message=result,
-                selected_document_type=selected_document_type,
-                updated_variables=current_variables
-            )
+            
+            # Fallback: Try regex parsing for corrupted JSON (commas instead of colons, mismatched brackets, etc.)
+            try:
+                # 1. Try to extract assistant_message
+                msg = ""
+                msg_match = re.search(r'["\']assistant_message["\']\s*[:,\s]\s*"((?:[^"\\]|\\.)*)"', cleaned_result, re.DOTALL)
+                if msg_match:
+                    msg = msg_match.group(1)
+                else:
+                    msg_match = re.search(r'["\']assistant_message["\']\s*[:,\s]\s*\'((?:[^\'\\]|\\.)*)\'', cleaned_result, re.DOTALL)
+                    if msg_match:
+                        msg = msg_match.group(1)
+                        
+                if msg:
+                    try:
+                        msg = json.loads(f'"{msg}"')
+                    except Exception:
+                        msg = msg.replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"').replace("\\'", "'")
+                        
+                # 2. Try to extract selected_document_type
+                doc_type = ""
+                doc_match = re.search(r'["\']selected_document_type["\']\s*[:,\s]\s*"((?:[^"\\]|\\.)*)"', cleaned_result, re.DOTALL)
+                if doc_match:
+                    doc_type = doc_match.group(1)
+                else:
+                    doc_match = re.search(r'["\']selected_document_type["\']\s*[:,\s]\s*\'((?:[^\'\\]|\\.)*)\'', cleaned_result, re.DOTALL)
+                    if doc_match:
+                        doc_type = doc_match.group(1)
+                        
+                if doc_type:
+                    try:
+                        doc_type = json.loads(f'"{doc_type}"')
+                    except Exception:
+                        doc_type = doc_type.replace('\\"', '"').replace("\\'", "'")
+                else:
+                    doc_type = selected_document_type
+
+                # 3. Try to extract updated_variables
+                vars_dict = {}
+                vars_match = re.search(r'["\']updated_variables["\']\s*[:,\s]\s*\{([^\}]+)\}', cleaned_result, re.DOTALL)
+                if vars_match:
+                    vars_block = vars_match.group(1)
+                    str_matches = re.findall(r'"((?:[^"\\]|\\.)*)"', vars_block)
+                    if not str_matches:
+                        str_matches = re.findall(r'\'((?:[^\'\\]|\\.)*)\'', vars_block)
+                        
+                    if str_matches:
+                        decoded_strs = []
+                        for s in str_matches:
+                            try:
+                                decoded_strs.append(json.loads(f'"{s}"'))
+                            except Exception:
+                                decoded_strs.append(s.replace('\\"', '"').replace("\\'", "'"))
+                        
+                        for i in range(0, len(decoded_strs) - 1, 2):
+                            key = decoded_strs[i].strip()
+                            val = decoded_strs[i+1]
+                            if key:
+                                vars_dict[key] = val
+                                
+                # Merge variables
+                final_vars = {**current_variables}
+                for k, v in vars_dict.items():
+                    matched_key = None
+                    for ck in current_variables.keys():
+                        if ck.lower() == k.lower():
+                            matched_key = ck
+                            break
+                    if matched_key:
+                        final_vars[matched_key] = str(v)
+                    else:
+                        final_vars[k] = str(v)
+                        
+                return LLMChatResponse(
+                    assistant_message=msg if msg else result,
+                    selected_document_type=doc_type if doc_type else selected_document_type,
+                    updated_variables=final_vars
+                )
+            except Exception as fallback_err:
+                print(f"Fallback corrupted JSON parser also failed: {fallback_err}")
+                return LLMChatResponse(
+                    assistant_message=result,
+                    selected_document_type=selected_document_type,
+                    updated_variables=current_variables
+                )
             
     except Exception as e:
         print(f"Error calling LLM: {e}")
