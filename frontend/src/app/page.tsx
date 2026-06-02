@@ -58,6 +58,165 @@ export default function Home() {
   const [formData, setFormData] = useState<NDAFormData>(defaultData);
   const [activeTab, setActiveTab] = useState<"cover" | "terms" | "full">("full");
 
+  // Auth and Document states
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [savedDocs, setSavedDocs] = useState<any[]>([]);
+  const [currentDocId, setCurrentDocId] = useState<number | null>(null);
+  const [saveStatus, setSaveStatus] = useState("");
+
+  const API_BASE = typeof window !== "undefined" && window.location.port === "3000"
+    ? "http://localhost:8000"
+    : "";
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("prelegal_token");
+    if (storedToken) {
+      setToken(storedToken);
+      fetchUserProfile(storedToken);
+    }
+  }, []);
+
+  const fetchUserProfile = async (authToken: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+        fetchDocuments(authToken);
+      } else {
+        handleLogout();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchDocuments = async (authToken: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/documents`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const docs = await res.json();
+        setSavedDocs(docs);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("prelegal_token");
+    setToken(null);
+    setUser(null);
+    setSavedDocs([]);
+    setCurrentDocId(null);
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    const endpoint = authMode === "login" ? "login" : "signup";
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: authUsername, password: authPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("prelegal_token", data.access_token);
+        setToken(data.access_token);
+        setUser(data.user);
+        setShowAuthModal(false);
+        setAuthUsername("");
+        setAuthPassword("");
+        fetchDocuments(data.access_token);
+      } else {
+        setAuthError(data.detail || "Authentication failed");
+      }
+    } catch (err) {
+      setAuthError("Network error occurred");
+    }
+  };
+
+  const handleSaveDocument = async () => {
+    if (!token) {
+      setAuthMode("login");
+      setShowAuthModal(true);
+      return;
+    }
+    setSaveStatus("Saving...");
+    const payload = {
+      document_type: "Mutual NDA",
+      title: formData.party1Company && formData.party2Company 
+        ? `${formData.party1Company} vs ${formData.party2Company} - Mutual NDA`
+        : "Untitled Mutual NDA",
+      variables: formData,
+      content: generateMarkdownContent(),
+    };
+
+    try {
+      const method = currentDocId ? "PUT" : "POST";
+      const url = currentDocId 
+        ? `${API_BASE}/api/documents/${currentDocId}` 
+        : `${API_BASE}/api/documents`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const savedDoc = await res.json();
+        setCurrentDocId(savedDoc.id);
+        setSaveStatus("Saved!");
+        fetchDocuments(token);
+        setTimeout(() => setSaveStatus(""), 3000);
+      } else {
+        setSaveStatus("Error saving");
+      }
+    } catch (err) {
+      setSaveStatus("Error saving");
+    }
+  };
+
+  const handleLoadDocument = (doc: any) => {
+    setCurrentDocId(doc.id);
+    setFormData(doc.variables);
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!token) return;
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/documents/${docId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        if (currentDocId === docId) {
+          setCurrentDocId(null);
+        }
+        fetchDocuments(token);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -510,6 +669,152 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
             </svg>
             Print / PDF
           </button>
+
+          {/* Database Persistence Integration */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", borderLeft: "1px solid var(--border-color)", paddingLeft: "0.75rem" }}>
+            {user ? (
+              <>
+                {savedDocs.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const doc = savedDocs.find(d => d.id === parseInt(e.target.value));
+                          if (doc) handleLoadDocument(doc);
+                        }
+                      }}
+                      value={currentDocId || ""}
+                      style={{
+                        padding: "0.5rem",
+                        borderRadius: "6px",
+                        background: "rgba(15, 23, 42, 0.8)",
+                        border: "1px solid var(--border-color)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.85rem",
+                        width: "160px"
+                      }}
+                    >
+                      <option value="">Load Document...</option>
+                      {savedDocs.map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.title}
+                        </option>
+                      ))}
+                    </select>
+                    {currentDocId && (
+                      <button
+                        onClick={() => handleDeleteDocument(currentDocId)}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          color: "#f87171",
+                          borderRadius: "6px",
+                          width: "30px",
+                          height: "30px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer"
+                        }}
+                        title="Delete Document"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+                
+                <button
+                  onClick={handleSaveDocument}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#10b981", // Green (Accent)
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {saveStatus || "Save to DB"}
+                </button>
+                
+                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span>Logged in as <strong>{user.username}</strong></span>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#f87171",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      textDecoration: "underline"
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleSaveDocument}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    border: "1px dashed var(--border-color)",
+                    background: "rgba(255,255,255,0.02)",
+                    color: "var(--text-secondary)",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 500,
+                    transition: "all 0.2s"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                  onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.02)"}
+                >
+                  Save to DB
+                </button>
+                <button
+                  onClick={() => { setAuthMode("login"); setAuthError(""); setShowAuthModal(true); }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--primary)",
+                    background: "transparent",
+                    color: "#a5b4fc",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = "rgba(99, 102, 241, 0.1)"}
+                  onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { setAuthMode("signup"); setAuthError(""); setShowAuthModal(true); }}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "var(--primary)",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s"
+                  }}
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -964,6 +1269,152 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
         </main>
 
       </div>
+
+      {/* Auth Modal Overlay */}
+      {showAuthModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.75)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "var(--bg-sidebar)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "12px",
+            padding: "2rem",
+            width: "100%",
+            maxWidth: "400px",
+            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.5)"
+          }}>
+            <h3 style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.25rem",
+              fontWeight: 600,
+              marginBottom: "1.5rem",
+              color: "var(--text-primary)",
+              textAlign: "center"
+            }}>
+              {authMode === "login" ? "Sign In to Prelegal" : "Create Account"}
+            </h3>
+
+            <form onSubmit={handleAuthSubmit}>
+              {authError && (
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  color: "#f87171",
+                  padding: "0.75rem",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  marginBottom: "1rem",
+                  textAlign: "center"
+                }}>
+                  {authError}
+                </div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="authUsername">Username</label>
+                <input
+                  type="text"
+                  id="authUsername"
+                  value={authUsername}
+                  onChange={(e) => setAuthUsername(e.target.value)}
+                  placeholder="e.g. janesmith"
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                <label htmlFor="authPassword">Password</label>
+                <input
+                  type="password"
+                  id="authPassword"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-color)",
+                    background: "rgba(15, 23, 42, 0.6)",
+                    color: "var(--text-primary)"
+                  }}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "var(--primary)",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  marginBottom: "1rem",
+                  transition: "all 0.2s"
+                }}
+              >
+                {authMode === "login" ? "Sign In" : "Register & Sign In"}
+              </button>
+            </form>
+
+            <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+              {authMode === "login" ? (
+                <>
+                  Don't have an account?{" "}
+                  <button
+                    onClick={() => { setAuthMode("signup"); setAuthError(""); }}
+                    style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    onClick={() => { setAuthMode("login"); setAuthError(""); }}
+                    style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Sign In
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => { setShowAuthModal(false); setAuthError(""); }}
+              style={{
+                width: "100%",
+                background: "none",
+                border: "none",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                marginTop: "1.5rem",
+                textDecoration: "underline"
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
