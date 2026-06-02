@@ -5,7 +5,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Session, select
 import json
 import datetime
@@ -16,7 +16,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from database import create_db_and_tables, get_db, User, Document
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
-from ai import ChatRequest, run_ai_chat
+from ai import ChatRequest, run_ai_chat, CATALOG_DATA
 
 # Pydantic schemas for request/response bodies
 class UserCreate(BaseModel):
@@ -28,8 +28,7 @@ class UserResponse(BaseModel):
     username: str
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -57,8 +56,7 @@ class DocumentResponse(BaseModel):
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -200,7 +198,7 @@ def update_document(doc_id: int, doc_data: DocumentUpdate, current_user: User = 
     if doc_data.content is not None:
         doc.content = doc_data.content
         
-    doc.updated_at = datetime.datetime.utcnow()
+    doc.updated_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     db.add(doc)
     db.commit()
     db.refresh(doc)
@@ -228,12 +226,18 @@ def delete_document(doc_id: int, current_user: User = Depends(get_current_user),
     db.commit()
     return {"message": "Document deleted successfully"}
 
+# Templates Endpoint
+@app.get("/api/templates")
+def get_templates():
+    return CATALOG_DATA
+
 # AI Chat Endpoint
 @app.post("/api/chat")
 def chat_with_ai(chat_req: ChatRequest):
     response = run_ai_chat(
         message=chat_req.message,
         chat_history=chat_req.chat_history,
+        selected_document_type=chat_req.selected_document_type,
         current_variables=chat_req.current_variables
     )
     return response

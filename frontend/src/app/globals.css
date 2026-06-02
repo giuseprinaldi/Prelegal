@@ -5,16 +5,17 @@
   --font-display: 'Outfit', sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   
-  --bg-app: #030712;
-  --bg-sidebar: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --border-color: rgba(255, 255, 255, 0.08);
+  --bg-app: #010c1e;
+  --bg-sidebar: #032147; /* Dark Navy */
+  --bg-card: rgba(3, 33, 71, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.15);
-  --accent: #10b981;
-  --accent-glow: rgba(16, 185, 129, 0.15);
+  --text-secondary: #888888; /* Gray Text */
+  --primary: #209dd7; /* Blue Primary */
+  --primary-glow: rgba(32, 157, 215, 0.15);
+  --accent: #ecad0a; /* Accent Yellow */
+  --accent-glow: rgba(236, 173, 10, 0.15);
+  --purple-btn: #753991; /* Purple Secondary */
   --danger: #ef4444;
 }
 
@@ -155,53 +156,54 @@ label {
   overflow-y: auto;
   height: 100%;
   gap: 2rem;
+  background: #0d1527;
 }
 
 .paper-page {
   background: #ffffff;
   color: #1e293b;
   width: 100%;
-  max-width: 800px;
-  min-height: 1030px;
+  max-width: 850px;
+  min-height: 1100px;
   height: auto;
   flex-shrink: 0;
-  padding: 3.5rem 4.5rem;
+  padding: 4.5rem 5.5rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   border-radius: 4px;
   position: relative;
   font-family: var(--font-serif);
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   transition: all 0.3s ease;
 }
 
 .paper-page h1 {
-  font-family: var(--font-sans);
-  font-size: 2rem;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
   font-weight: 700;
   text-align: center;
   margin-bottom: 2rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #0f172a;
+  color: var(--bg-sidebar); /* Dark Navy for headings */
 }
 
 .paper-page h2 {
   font-family: var(--font-sans);
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
-  color: #1e293b;
+  margin-top: 1.8rem;
+  margin-bottom: 0.8rem;
+  color: var(--bg-sidebar); /* Dark Navy */
   border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.3rem;
 }
 
 .paper-page h3 {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  margin-top: 1.2rem;
+  margin-top: 1.4rem;
   margin-bottom: 0.5rem;
   color: #334155;
   text-transform: uppercase;
@@ -245,13 +247,21 @@ label {
 
 .paper-page .highlight-field {
   background-color: #fef08a;
-  color: #854d0e;
-  font-weight: 500;
-  padding: 0.1rem 0.3rem;
-  border-radius: 2px;
+  color: var(--accent); /* Accent Yellow style */
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
   font-family: var(--font-sans);
   font-size: 0.85rem;
+  border: 1px dashed var(--accent);
   display: inline-block;
+}
+
+.paper-page .filled-variable {
+  color: #1e3a8a;
+  font-weight: 600;
+  border-bottom: 1px dashed var(--primary);
+  padding: 0 0.1rem;
 }
 
 /* Printing styles */
@@ -280,7 +290,7 @@ label {
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    font-size: 12pt !important;
+    font-size: 11pt !important;
   }
   
   .paper-page {

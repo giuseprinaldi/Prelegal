@@ -25,6 +25,9 @@ RUN uv sync --frozen --no-dev
 
 # Copy the rest of the backend files
 COPY backend/ /app/backend/
+COPY catalog.json /app/
+COPY templates/ /app/templates/
+COPY .env /app/
 
 # Copy built frontend static files
 COPY --from=frontend-builder /app/frontend/out /app/frontend/out
