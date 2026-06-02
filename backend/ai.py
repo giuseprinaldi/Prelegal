@@ -3,8 +3,11 @@ import json
 import re
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+import litellm
 from litellm import completion
 from dotenv import load_dotenv
+
+litellm.drop_params = True
 
 # Load .env from root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -116,7 +119,6 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
             model=MODEL,
             messages=messages,
             response_format=LLMChatResponse,
-            reasoning_effort="low",
             extra_body=EXTRA_BODY,
             timeout=30.0
         )
