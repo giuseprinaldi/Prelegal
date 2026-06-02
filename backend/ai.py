@@ -89,6 +89,17 @@ Instructions:
    - If the user provides details, extract them and update the fields in `updated_variables`. If they modify an existing variable, update it. Preserve all other variables unchanged.
    - Be helpful. If they ask questions about what a term means (e.g. 'Governing Law', 'Uptime Credit'), explain it simply.
    - Keep your conversational messages clear, concise, and focused on helping them complete the document. Once all fields are filled, let them know they can verify the preview on the right and download or print the completed document.
+
+Output Format:
+You MUST respond with a valid JSON object matching this structure:
+{
+  "assistant_message": "your reply text here",
+  "selected_document_type": "name of selected document or empty string if not selected",
+  "updated_variables": {
+    "variable_name": "extracted value"
+  }
+}
+Do not include any text outside of the JSON object.
 """
     return prompt
 
@@ -119,15 +130,36 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
             model=MODEL,
             messages=messages,
             response_format=LLMChatResponse,
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+            api_base="https://openrouter.ai/api/v1",
             extra_body=EXTRA_BODY,
             timeout=30.0
         )
         result = response.choices[0].message.content
-        chat_response = LLMChatResponse.model_validate_json(result)
-        return chat_response
+        
+        # Try to parse result as JSON
+        try:
+            cleaned_result = result.strip()
+            # If the response is wrapped in a markdown code block, extract the content
+            if cleaned_result.startswith("```"):
+                match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned_result, re.DOTALL)
+                if match:
+                    cleaned_result = match.group(1).strip()
+            
+            chat_response = LLMChatResponse.model_validate_json(cleaned_result)
+            return chat_response
+        except Exception as json_err:
+            print(f"Failed to parse LLM response as LLMChatResponse JSON: {json_err}. Raw response: {result}")
+            # Fallback: treat raw response as the assistant's message, keeping variables and document selection unchanged
+            return LLMChatResponse(
+                assistant_message=result,
+                selected_document_type=selected_document_type,
+                updated_variables=current_variables
+            )
+            
     except Exception as e:
         print(f"Error calling LLM: {e}")
-        # Return fallback response with variables unchanged
+        # Return fallback response with error message
         return LLMChatResponse(
             assistant_message=f"I'm sorry, I encountered an issue communicating with the AI backend: {str(e)}. Please try sending your message again.",
             selected_document_type=selected_document_type,
