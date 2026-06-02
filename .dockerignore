@@ -1,0 +1,12 @@
+.git
+.gitignore
+.venv
+node_modules
+frontend/node_modules
+frontend/.next
+frontend/out
+backend/.venv
+backend/prelegal.db
+.gemini
+*.log
+*.db
