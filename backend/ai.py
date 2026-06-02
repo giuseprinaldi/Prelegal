@@ -129,7 +129,7 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
         response = completion(
             model=MODEL,
             messages=messages,
-            response_format=LLMChatResponse,
+            response_format={"type": "json_object"},
             api_key=os.environ.get("OPENROUTER_API_KEY"),
             api_base="https://openrouter.ai/api/v1",
             extra_body=EXTRA_BODY,
@@ -146,6 +146,29 @@ def run_ai_chat(message: str, chat_history: List[Dict[str, str]], selected_docum
                 if match:
                     cleaned_result = match.group(1).strip()
             
+            # 1. First try to load as standard JSON dict
+            data = json.loads(cleaned_result)
+            if isinstance(data, dict):
+                # Map alternate keys if necessary
+                assistant_msg = data.get("assistant_message") or data.get("message") or data.get("response") or ""
+                doc_type = data.get("selected_document_type") or data.get("selected_doc") or selected_document_type
+                variables = data.get("updated_variables")
+                
+                # Make sure the variables keys/values are strings
+                clean_vars = {}
+                if isinstance(variables, dict):
+                    for k, v in variables.items():
+                        clean_vars[str(k)] = str(v) if v is not None else ""
+                else:
+                    clean_vars = current_variables
+
+                return LLMChatResponse(
+                    assistant_message=str(assistant_msg) if assistant_msg else result,
+                    selected_document_type=str(doc_type),
+                    updated_variables=clean_vars
+                )
+            
+            # 2. Fall back to standard model validation if it's not a dict
             chat_response = LLMChatResponse.model_validate_json(cleaned_result)
             return chat_response
         except Exception as json_err:
