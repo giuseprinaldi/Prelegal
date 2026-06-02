@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { marked } from "marked";
 
 interface Template {
@@ -57,6 +57,14 @@ export default function Home() {
   ]);
   const [inputText, setInputText] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Ref for the sentinel element at the bottom of the chat list
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom whenever messages change or loading indicator appears/disappears
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isChatLoading]);
 
   // Helper to initialize form data placeholders
   const getInitialFormData = useCallback((placeholders: string[]) => {
@@ -1208,6 +1216,8 @@ export default function Home() {
                     <span>AI is drafting...</span>
                   </div>
                 )}
+                {/* Sentinel element — always scrolled into view after updates */}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input Area */}
