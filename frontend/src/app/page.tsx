@@ -70,6 +70,17 @@ export default function Home() {
   const [currentDocId, setCurrentDocId] = useState<number | null>(null);
   const [saveStatus, setSaveStatus] = useState("");
 
+  // Chat Guide state
+  const [sidebarTab, setSidebarTab] = useState<"chat" | "fields">("chat");
+  const [messages, setMessages] = useState<any[]>([
+    {
+      role: "assistant",
+      content: "Hello! I am your Prelegal AI assistant. I will help you draft your Mutual NDA step-by-step. To get started, what are the names of the two companies entering the agreement, and what is the business purpose of sharing information?"
+    }
+  ]);
+  const [inputText, setInputText] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
   const API_BASE = typeof window !== "undefined" && window.location.port === "3000"
     ? "http://localhost:8000"
     : "";
@@ -214,6 +225,40 @@ export default function Home() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const userMessage = { role: "user", content: inputText };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
+    setIsChatLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: inputText,
+          chat_history: messages.map((m) => ({ role: m.role, content: m.content })),
+          current_variables: formData
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((prev) => [...prev, { role: "assistant", content: data.assistant_message }]);
+        setFormData(data.updated_variables);
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", content: "I'm sorry, I couldn't reach the AI backend. Please try again." }]);
+      }
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "A network error occurred. Please check your connection." }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -826,26 +871,178 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
           width: "480px",
           borderRight: "1px solid var(--border-color)",
           background: "rgba(10, 15, 30, 0.5)",
-          padding: "1.5rem",
-          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
           height: "100%"
         }}>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            marginBottom: "1.5rem",
-            color: "var(--text-primary)",
+          {/* Tab Selector */}
+          <div style={{
             display: "flex",
-            alignItems: "center",
-            gap: "0.5rem"
+            borderBottom: "1px solid var(--border-color)",
+            background: "rgba(15, 23, 42, 0.3)"
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
-            </svg>
-            Agreement Variables
-          </h2>
+            <button
+              onClick={() => setSidebarTab("chat")}
+              style={{
+                flex: 1,
+                padding: "1rem",
+                background: sidebarTab === "chat" ? "rgba(255, 255, 255, 0.03)" : "transparent",
+                border: "none",
+                borderBottom: sidebarTab === "chat" ? "2px solid var(--primary)" : "2px solid transparent",
+                color: sidebarTab === "chat" ? "var(--text-primary)" : "var(--text-secondary)",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                transition: "all 0.2s"
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              AI Drafting Chat
+            </button>
+            <button
+              onClick={() => setSidebarTab("fields")}
+              style={{
+                flex: 1,
+                padding: "1rem",
+                background: sidebarTab === "fields" ? "rgba(255, 255, 255, 0.03)" : "transparent",
+                border: "none",
+                borderBottom: sidebarTab === "fields" ? "2px solid var(--primary)" : "2px solid transparent",
+                color: sidebarTab === "fields" ? "var(--text-primary)" : "var(--text-secondary)",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                transition: "all 0.2s"
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
+              </svg>
+              Manual Variables
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {sidebarTab === "chat" ? (
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", padding: "1.25rem" }}>
+              {/* Chat Messages Log */}
+              <div style={{
+                flex: 1,
+                overflowY: "auto",
+                marginBottom: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem",
+                paddingRight: "0.25rem"
+              }}>
+                {messages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                      maxWidth: "85%",
+                      background: msg.role === "user" ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "rgba(255, 255, 255, 0.05)",
+                      border: msg.role === "user" ? "none" : "1px solid var(--border-color)",
+                      color: "#ffffff",
+                      borderRadius: msg.role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                      padding: "0.75rem 1rem",
+                      fontSize: "0.9rem",
+                      lineHeight: "1.4",
+                      boxShadow: msg.role === "user" ? "0 4px 10px rgba(99, 102, 241, 0.2)" : "none",
+                      whiteSpace: "pre-wrap"
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div style={{
+                    alignSelf: "flex-start",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--border-color)",
+                    color: "var(--text-secondary)",
+                    borderRadius: "12px 12px 12px 2px",
+                    padding: "0.75rem 1rem",
+                    fontSize: "0.9rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem"
+                  }}>
+                    <span className="dot-loading" style={{ animationDelay: "0s" }}>•</span>
+                    <span className="dot-loading" style={{ animationDelay: "0.2s" }}>•</span>
+                    <span className="dot-loading" style={{ animationDelay: "0.4s" }}>•</span>
+                    <span>AI is drafting...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input Area */}
+              <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Ask AI or answer questions..."
+                  disabled={isChatLoading}
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-color)",
+                    background: "rgba(15, 23, 42, 0.6)",
+                    color: "#ffffff",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={isChatLoading || !inputText.trim()}
+                  style={{
+                    padding: "0.75rem 1.25rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "linear-gradient(135deg, #753991, #8b5cf6)", // Purple Secondary
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    transition: "all 0.2s",
+                    opacity: (isChatLoading || !inputText.trim()) ? 0.6 : 1
+                  }}
+                >
+                  Send
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem" }}>
+              <h2 style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                marginBottom: "1.5rem",
+                color: "var(--text-primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem"
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
+                </svg>
+                Agreement Variables
+              </h2>
 
           {/* Section 1: Agreement Info */}
           <div className="form-section">
@@ -1167,6 +1364,8 @@ Common Paper Mutual Non-Disclosure Agreement (Version 1.0) free to use under CC 
               </div>
             </div>
           </div>
+          </div>
+          )}
         </aside>
 
         {/* Right Column: Live Document Preview */}

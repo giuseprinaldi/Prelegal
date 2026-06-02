@@ -117,3 +117,31 @@ def test_document_crud(client: TestClient):
     # Read deleted Document (should be 404)
     response = client.get(f"/api/documents/{doc_id}", headers=auth_headers)
     assert response.status_code == 404
+
+from unittest.mock import patch
+from ai import LLMChatResponse, NDAFormDataModel
+
+def test_ai_chat_endpoint(client: TestClient):
+    mock_response = LLMChatResponse(
+        assistant_message="Hello, I have updated the company names for you.",
+        updated_variables=NDAFormDataModel(
+            party1Company="Mock Party 1",
+            party2Company="Mock Party 2"
+        )
+    )
+    
+    with patch("main.run_ai_chat", return_value=mock_response) as mock_run:
+        payload = {
+            "message": "Update company names to Mock Party 1 and Mock Party 2",
+            "chat_history": [],
+            "current_variables": {}
+        }
+        response = client.post("/api/chat", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["assistant_message"] == "Hello, I have updated the company names for you."
+        assert data["updated_variables"]["party1Company"] == "Mock Party 1"
+        assert data["updated_variables"]["party2Company"] == "Mock Party 2"
+        
+        mock_run.assert_called_once()

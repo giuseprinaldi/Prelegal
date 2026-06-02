@@ -311,3 +311,22 @@ label {
     background-color: #f1f5f9 !important;
   }
 }
+
+/* AI Chat Dot Loading Animation */
+.dot-loading {
+  display: inline-block;
+  font-weight: bold;
+  animation: dot-blink 1.4s infinite both;
+}
+
+@keyframes dot-blink {
+  0% {
+    opacity: .2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: .2;
+  }
+}
