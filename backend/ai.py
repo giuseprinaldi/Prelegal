@@ -92,13 +92,13 @@ Instructions:
 
 Output Format:
 You MUST respond with a valid JSON object matching this structure:
-{
+{{
   "assistant_message": "your reply text here",
   "selected_document_type": "name of selected document or empty string if not selected",
-  "updated_variables": {
+  "updated_variables": {{
     "variable_name": "extracted value"
-  }
-}
+  }}
+}}
 Do not include any text outside of the JSON object.
 """
     return prompt
