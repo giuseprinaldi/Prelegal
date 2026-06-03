@@ -27,7 +27,9 @@ RUN uv sync --frozen --no-dev
 COPY backend/ /app/backend/
 COPY catalog.json /app/
 COPY templates/ /app/templates/
-COPY .env /app/
+# NOTE: .env is intentionally NOT copied into the image so secrets (e.g.
+# OPENROUTER_API_KEY) are not baked into image layers. Provide them at runtime
+# instead, e.g. `docker run --env-file .env ...` (see scripts/start-*).
 
 # Copy built frontend static files
 COPY --from=frontend-builder /app/frontend/out /app/frontend/out

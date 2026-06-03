@@ -10,3 +10,5 @@ backend/prelegal.db
 .gemini
 *.log
 *.db
+# Keep secrets out of the build context; they are passed at runtime via --env-file
+.env
