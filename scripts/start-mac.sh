@@ -11,6 +11,9 @@ if [ "$(docker ps -a -q -f name=prelegal-container)" ]; then
 fi
 
 echo "Starting Prelegal container..."
-docker run -d --name prelegal-container -p 8000:8000 prelegal-app
+if [ ! -f .env ]; then
+    echo "Warning: .env not found. The app may fail to reach the AI without OPENROUTER_API_KEY."
+fi
+docker run -d --name prelegal-container --env-file .env -p 8000:8000 prelegal-app
 
 echo "Prelegal is running at http://localhost:8000"

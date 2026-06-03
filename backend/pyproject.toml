@@ -19,3 +19,9 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "uvicorn>=0.48.0",
 ]
+
+[tool.pytest.ini_options]
+# Put the backend/ dir on sys.path so tests can `import main`, `import ai`, etc.
+# regardless of how pytest is launched (uv run pytest, python -m pytest, ...).
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -11,6 +11,9 @@ if ($existing) {
 }
 
 Write-Host "Starting Prelegal container..." -ForegroundColor Cyan
-docker run -d --name prelegal-container -p 8000:8000 prelegal-app
+if (-not (Test-Path ".env")) {
+    Write-Host "Warning: .env not found. The app may fail to reach the AI without OPENROUTER_API_KEY." -ForegroundColor Yellow
+}
+docker run -d --name prelegal-container --env-file .env -p 8000:8000 prelegal-app
 
 Write-Host "Prelegal is running at http://localhost:8000" -ForegroundColor Green
